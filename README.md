@@ -1,0 +1,2 @@
+# Tizenfy
+Spotify for tizen
