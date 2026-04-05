@@ -2,565 +2,940 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="TV Remote" />
-  <meta name="theme-color" content="#0a0a0a" />
-  <title>TizenSpotify Remote</title>
+  <meta name="apple-mobile-web-app-title" content="Tizenfy" />
+  <meta name="theme-color" content="#080808" />
+  <title>Tizenfy Remote</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Unbounded:wght@300;700;900&display=swap" rel="stylesheet" />
 
   <style>
     :root {
-      --green: #1DB954;
-      --green-dim: #158a3e;
-      --bg: #0a0a0a;
-      --surface: #141414;
-      --surface2: #1c1c1c;
-      --border: #2a2a2a;
-      --text: #f0f0f0;
-      --text-dim: #666;
-      --red: #e84040;
-      --btn-size: 72px;
-      --btn-radius: 20px;
+      --green:      #1DB954;
+      --green-dim:  #169140;
+      --green-glow: rgba(29,185,84,0.18);
+      --green-hi:   rgba(29,185,84,0.36);
+      --bg:         #080808;
+      --s1:         rgba(255,255,255,0.04);
+      --s2:         rgba(255,255,255,0.07);
+      --s3:         rgba(255,255,255,0.11);
+      --border:     rgba(255,255,255,0.08);
+      --border2:    rgba(255,255,255,0.14);
+      --text:       #f2f2f2;
+      --text-mid:   rgba(242,242,242,0.55);
+      --text-dim:   rgba(242,242,242,0.32);
+      --red:        #ff4040;
+      --red-glow:   rgba(255,64,64,0.16);
+      --sat: env(safe-area-inset-top,    0px);
+      --sar: env(safe-area-inset-right,  0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left,   0px);
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-    html, body {
-      height: 100%;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Mono', monospace;
-      overflow: hidden;
-      user-select: none;
+    *, *::before, *::after {
+      box-sizing: border-box; margin: 0; padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-touch-callout: none;
     }
+
+    html { height: 100%; overscroll-behavior: none; }
 
     body {
-      display: flex;
-      flex-direction: column;
-      padding: env(safe-area-inset-top, 20px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 20px) env(safe-area-inset-left, 16px);
-      gap: 0;
+      background: var(--bg); color: var(--text);
+      font-family: 'DM Mono', monospace;
+      height: 100%; overflow: hidden;
+      position: fixed; inset: 0;
     }
 
-    /* ── STATUS BAR ── */
-    .status-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 12px 0 8px;
-      flex-shrink: 0;
-    }
-
-    .app-title {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 11px;
-      font-weight: 700;
-      letter-spacing: 0.15em;
-      color: var(--green);
-      text-transform: uppercase;
-    }
-
-    .connection-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--red);
-      transition: background 0.4s;
-      box-shadow: 0 0 0 0 var(--red);
-    }
-
-    .connection-dot.connected {
-      background: var(--green);
-      animation: pulse 2s infinite;
-      box-shadow: 0 0 0 0 var(--green);
-    }
-
-    @keyframes pulse {
-      0%   { box-shadow: 0 0 0 0 rgba(29,185,84,0.5); }
-      70%  { box-shadow: 0 0 0 6px rgba(29,185,84,0); }
-      100% { box-shadow: 0 0 0 0 rgba(29,185,84,0); }
-    }
-
-    /* ── NOW PLAYING ── */
-    .now-playing {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px 18px;
-      margin: 8px 0;
-      flex-shrink: 0;
-      min-height: 72px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .now-playing::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(29,185,84,0.04) 0%, transparent 60%);
+    /* ── TOASTS ───────────────────────────────── */
+    #toastWrap {
+      position: fixed;
+      bottom: calc(var(--sab) + 20px);
+      left: 18px; right: 18px;
+      z-index: 9000;
+      display: flex; flex-direction: column-reverse; gap: 8px;
       pointer-events: none;
     }
-
-    .track-label {
-      font-size: 9px;
-      letter-spacing: 0.2em;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      margin-bottom: 4px;
+    .toast {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 13px 15px;
+      background: rgba(16,16,16,0.97);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--green);
+      border-radius: 14px;
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      transform: translateY(60px) scale(0.96); opacity: 0;
+      transition: transform 0.4s cubic-bezier(0.34,1.4,0.64,1), opacity 0.3s ease;
+      will-change: transform, opacity;
     }
+    .toast.show { transform: translateY(0) scale(1); opacity: 1; }
+    .toast.err  { border-left-color: var(--red); }
+    .toast-ico  { flex-shrink: 0; margin-top: 1px; }
+    .toast-msg  { font-size: 12px; line-height: 1.45; color: var(--text); }
 
-    .track-name {
+    /* ── CAMERA OVERLAY ───────────────────────── */
+    #camOverlay {
+      position: fixed; inset: 0; z-index: 800;
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding-top: var(--sat);
+      padding-bottom: calc(var(--sab) + 16px);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.28s ease;
+    }
+    #camOverlay.open { opacity: 1; pointer-events: all; }
+
+    #camVideo {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover; opacity: 0.65;
+    }
+    #camCanvas { display: none; }
+
+    .cam-ui {
+      position: relative; z-index: 10;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 28px;
+      padding: 32px 24px;
+    }
+    .cam-heading {
       font-family: 'Unbounded', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--text);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.2;
+      font-size: 14px; font-weight: 700;
+      letter-spacing: 0.12em; text-transform: uppercase;
+      color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,0.9);
     }
 
-    .artist-name {
-      font-size: 12px;
-      color: var(--text-dim);
-      margin-top: 3px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .reticle { width: 214px; height: 214px; position: relative; }
+    .rc { position: absolute; width: 30px; height: 30px; border-color: var(--green); border-style: solid; }
+    .rc.tl { top:0; left:0;     border-width:3px 0 0 3px; border-radius:5px 0 0 0; }
+    .rc.tr { top:0; right:0;    border-width:3px 3px 0 0; border-radius:0 5px 0 0; }
+    .rc.bl { bottom:0; left:0;  border-width:0 0 3px 3px; border-radius:0 0 0 5px; }
+    .rc.br { bottom:0; right:0; border-width:0 3px 3px 0; border-radius:0 0 5px 0; }
+    .scanline {
+      position: absolute; left:6px; right:6px; height:2px;
+      background: linear-gradient(90deg, transparent, var(--green), transparent);
+      box-shadow: 0 0 10px var(--green), 0 0 20px var(--green-glow);
+      animation: scanAnim 1.8s ease-in-out infinite;
+    }
+    @keyframes scanAnim {
+      0%   { top:6px; opacity:0; }
+      10%  { opacity:1; }
+      90%  { opacity:1; }
+      100% { top:calc(100% - 8px); opacity:0; }
     }
 
-    .ad-badge {
-      display: none;
-      position: absolute;
-      top: 12px;
-      right: 14px;
-      background: var(--red);
-      color: #fff;
-      font-size: 9px;
-      font-weight: 500;
-      letter-spacing: 0.1em;
-      padding: 3px 8px;
-      border-radius: 20px;
-      text-transform: uppercase;
+    .cam-hint {
+      font-size: 12px; color: rgba(255,255,255,0.55);
+      text-align: center; line-height: 1.55;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.8);
     }
-
-    .ad-badge.visible { display: block; }
-
-    /* ── CONTROLS GRID ── */
-    .controls {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      justify-content: center;
-      overflow: hidden;
+    .cam-cancel {
+      background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 100px; color: #fff; cursor: pointer;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      padding: 14px 36px; touch-action: manipulation;
+      transition: background 0.15s, transform 0.1s;
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     }
+    .cam-cancel:active { background: rgba(255,255,255,0.22); transform: scale(0.95); }
 
-    .row {
-      display: flex;
-      gap: 10px;
-      justify-content: center;
+    #camFlash {
+      position: absolute; inset: 0; z-index: 20;
+      background: rgba(29,185,84,0.45);
+      opacity: 0; pointer-events: none;
     }
+    #camFlash.flash { animation: flashOut 0.55s ease forwards; }
+    @keyframes flashOut { 0% { opacity:1; } 100% { opacity:0; } }
 
-    /* ── BUTTONS ── */
-    .btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--btn-radius);
-      color: var(--text);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      height: var(--btn-size);
-      width: var(--btn-size);
-      position: relative;
-      transition: background 0.12s, transform 0.1s, border-color 0.12s;
-      -webkit-touch-callout: none;
-      touch-action: manipulation;
-      flex-shrink: 0;
-    }
-
-    .btn:active {
-      background: var(--surface2);
-      transform: scale(0.93);
-      border-color: #3a3a3a;
-    }
-
-    .btn.wide {
-      width: calc(var(--btn-size) * 2 + 10px);
-    }
-
-    .btn.green {
-      background: var(--green);
-      border-color: var(--green);
-      color: #000;
-    }
-
-    .btn.green:active { background: var(--green-dim); }
-
-    .btn svg {
-      width: 22px;
-      height: 22px;
-      flex-shrink: 0;
-    }
-
-    .btn.green svg { color: #000; }
-
-    .btn-label {
-      font-size: 8px;
-      letter-spacing: 0.08em;
-      color: var(--text-dim);
-      text-transform: uppercase;
-      line-height: 1;
-    }
-
-    .btn.green .btn-label { color: rgba(0,0,0,0.6); }
-
-    /* ── VOLUME SLIDER ── */
-    .volume-row {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 0 4px;
-      flex-shrink: 0;
-    }
-
-    .vol-icon { color: var(--text-dim); flex-shrink: 0; }
-
-    input[type=range] {
-      -webkit-appearance: none;
-      appearance: none;
-      flex: 1;
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      outline: none;
-    }
-
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: var(--green);
-      cursor: pointer;
-    }
-
-    /* ── CONNECTING SCREEN ── */
-    .connecting {
-      position: fixed;
-      inset: 0;
+    /* ── CONNECT SCREEN ───────────────────────── */
+    #connectScreen {
+      position: fixed; inset: 0; z-index: 400;
       background: var(--bg);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 16px;
-      z-index: 100;
-      transition: opacity 0.4s;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 36px;
+      padding: calc(var(--sat) + 28px) 28px calc(var(--sab) + 28px);
+      transition: transform 0.55s cubic-bezier(0.76,0,0.24,1), opacity 0.5s ease;
+      will-change: transform, opacity;
     }
+    #connectScreen.away { transform: translateY(-110%); opacity: 0; pointer-events: none; }
 
-    .connecting.hidden { opacity: 0; pointer-events: none; }
-
-    .connecting-title {
+    .logo-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 60px; height: 60px;
+      background: var(--green); border-radius: 18px;
+      display: flex; align-items: center; justify-content: center;
+      animation: iconPulse 3.2s ease-in-out infinite;
+    }
+    .logo-icon svg { color: #000; }
+    @keyframes iconPulse {
+      0%,100% { box-shadow: 0 0 32px var(--green-glow), 0 8px 28px rgba(0,0,0,0.55); }
+      50%     { box-shadow: 0 0 56px var(--green-hi),   0 8px 28px rgba(0,0,0,0.55); }
+    }
+    .logo-name {
       font-family: 'Unbounded', sans-serif;
-      font-size: 18px;
-      font-weight: 900;
-      color: var(--green);
+      font-size: 24px; font-weight: 900; letter-spacing: 0.02em;
+      color: var(--text);
+    }
+    .logo-tagline {
+      font-size: 10px; letter-spacing: 0.22em;
+      color: var(--text-dim); text-transform: uppercase;
+      margin-top: -5px;
     }
 
-    .connecting-sub {
-      font-size: 12px;
-      color: var(--text-dim);
-      text-align: center;
-      line-height: 1.6;
-      max-width: 260px;
+    .connect-card {
+      width: 100%; max-width: 330px;
+      background: var(--s1); border: 1px solid var(--border);
+      border-radius: 26px; padding: 24px 22px;
+      display: flex; flex-direction: column; gap: 16px;
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
     }
+    .card-label { font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim); text-transform: uppercase; }
 
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid var(--border);
-      border-top-color: var(--green);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* ── IP INPUT ── */
-    .ip-form {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      width: 100%;
-      max-width: 280px;
-      align-items: center;
-    }
-
+    .ip-wrap { position: relative; }
     .ip-input {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 12px;
+      width: 100%;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border2); border-radius: 14px;
       color: var(--text);
       font-family: 'DM Mono', monospace;
-      font-size: 16px;
-      padding: 14px 16px;
-      text-align: center;
-      width: 100%;
+      font-size: 19px; font-weight: 500; letter-spacing: 0.06em;
+      padding: 16px 52px 16px 18px;
       outline: none;
-      letter-spacing: 0.05em;
+      transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+      -webkit-appearance: none;
+    }
+    .ip-input::placeholder { color: var(--text-dim); font-size: 14px; letter-spacing: 0.04em; }
+    .ip-input:focus {
+      border-color: var(--green); background: rgba(29,185,84,0.05);
+      box-shadow: 0 0 0 4px var(--green-glow);
+    }
+    .ip-input.bad {
+      border-color: var(--red); background: var(--red-glow);
+      box-shadow: 0 0 0 4px rgba(255,64,64,0.13);
+      animation: shakeIt 0.38s cubic-bezier(0.36,0.07,0.19,0.97);
+    }
+    @keyframes shakeIt {
+      0%,100% { transform: translateX(0); }
+      18% { transform: translateX(-7px); }
+      36% { transform: translateX(7px); }
+      54% { transform: translateX(-5px); }
+      72% { transform: translateX(5px); }
+      88% { transform: translateX(-2px); }
     }
 
-    .ip-input:focus { border-color: var(--green); }
+    .qr-btn {
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      width: 36px; height: 36px; border-radius: 10px;
+      background: var(--s2); border: 1px solid var(--border);
+      color: var(--text-mid); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; touch-action: manipulation;
+      transition: background 0.14s, color 0.14s, transform 0.12s;
+    }
+    .qr-btn:active { background: var(--green); color: #000; transform: translateY(-50%) scale(0.88); }
 
-    .connect-btn {
-      background: var(--green);
-      border: none;
-      border-radius: 12px;
-      color: #000;
-      cursor: pointer;
+    .ip-err {
+      font-size: 11px; color: var(--red); padding: 0 4px;
+      min-height: 15px; opacity: 0; transition: opacity 0.2s;
+    }
+    .ip-err.on { opacity: 1; }
+
+    .btn-connect {
+      background: var(--green); border: none; border-radius: 14px;
+      color: #000; cursor: pointer;
       font-family: 'Unbounded', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      padding: 14px 24px;
-      width: 100%;
-      transition: background 0.12s, transform 0.1s;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.09em;
+      padding: 18px; width: 100%; touch-action: manipulation;
+      position: relative; overflow: hidden;
+      box-shadow: 0 5px 22px rgba(29,185,84,0.32);
+      transition: background 0.15s, transform 0.12s, box-shadow 0.15s;
+    }
+    .btn-connect:active { background: var(--green-dim); transform: scale(0.97); box-shadow: 0 2px 10px rgba(29,185,84,0.18); }
+    .btn-connect.busy   { opacity: 0.7; pointer-events: none; }
+
+    .connect-hint { font-size: 10.5px; color: var(--text-dim); text-align: center; line-height: 1.75; }
+
+    /* ── REMOTE SCREEN ────────────────────────── */
+    #remoteScreen {
+      position: fixed; inset: 0;
+      display: flex; flex-direction: column;
+      padding-top: var(--sat); padding-bottom: var(--sab);
+      padding-left: var(--sal); padding-right: var(--sar);
+      transform: translateY(100%);
+      transition: transform 0.6s cubic-bezier(0.76,0,0.24,1);
+      will-change: transform;
+    }
+    #remoteScreen.on { transform: translateY(0); }
+
+    .ambient-glow {
+      position: absolute; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(ellipse 90% 40% at 50% -5%, rgba(29,185,84,0.09) 0%, transparent 65%);
+      transition: opacity 1s ease;
+    }
+    .ambient-glow.ad-mode {
+      background: radial-gradient(ellipse 90% 40% at 50% -5%, rgba(255,64,64,0.09) 0%, transparent 65%);
     }
 
-    .connect-btn:active { background: var(--green-dim); transform: scale(0.97); }
-
-    .ip-hint {
-      font-size: 10px;
-      color: var(--text-dim);
-      text-align: center;
-      line-height: 1.5;
+    .topbar {
+      position: relative; z-index: 2;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 18px 20px 10px; flex-shrink: 0;
     }
+    .wordmark {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 13px; font-weight: 900; letter-spacing: 0.08em; color: var(--green);
+    }
+    .topbar-right { display: flex; align-items: center; gap: 10px; }
+
+    .cdot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--red); transition: background 0.35s; flex-shrink: 0;
+    }
+    .cdot.live { background: var(--green); animation: livePulse 2.5s ease-in-out infinite; }
+    @keyframes livePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(29,185,84,0.6); }
+      60%     { box-shadow: 0 0 0 5px rgba(29,185,84,0); }
+    }
+
+    .btn-change {
+      background: var(--s1); border: 1px solid var(--border); border-radius: 9px;
+      color: var(--text-dim); cursor: pointer;
+      font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em;
+      padding: 7px 11px; text-transform: uppercase; touch-action: manipulation;
+      transition: background 0.14s, color 0.14s, transform 0.1s;
+    }
+    .btn-change:active { background: var(--s3); color: var(--text); transform: scale(0.93); }
+
+    .np-card {
+      position: relative; z-index: 2;
+      margin: 4px 16px 14px;
+      background: var(--s1); border: 1px solid var(--border); border-radius: 22px;
+      padding: 18px 20px 18px 22px; overflow: hidden; flex-shrink: 0;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+    .np-card::before {
+      content: ''; position: absolute; left:0; top:0; bottom:0;
+      width: 3px; background: var(--green); transition: background 0.4s;
+    }
+    .np-card.ad-on::before { background: var(--red); }
+
+    .np-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; }
+    .np-eyebrow { font-size: 9px; letter-spacing: 0.22em; color: var(--text-dim); text-transform: uppercase; }
+    .ad-pill {
+      background: var(--red); color: #fff;
+      font-size: 8px; font-weight: 500; letter-spacing: 0.14em;
+      padding: 3px 9px; border-radius: 100px; text-transform: uppercase; display: none;
+    }
+    .ad-pill.show { display: block; }
+
+    .marquee-clip { overflow: hidden; position: relative; }
+    .marquee-clip::after {
+      content: ''; position: absolute; right:0; top:0; bottom:0; width: 28px;
+      background: linear-gradient(to left, #111 0%, transparent 100%); pointer-events: none;
+    }
+    .track-name {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 17px; font-weight: 700; color: var(--text);
+      white-space: nowrap; display: inline-block; line-height: 1.25;
+    }
+    .track-name.scroll { animation: marquee var(--dur, 8s) linear infinite; }
+    @keyframes marquee {
+      0%,12%  { transform: translateX(0); }
+      88%,100% { transform: translateX(var(--dx, -120px)); }
+    }
+    .artist-name {
+      font-size: 12.5px; color: var(--text-mid); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+
+    .controls {
+      flex: 1; position: relative; z-index: 2;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 20px; padding: 0 16px; overflow: hidden;
+    }
+
+    .transport { display: flex; align-items: center; justify-content: center; gap: 14px; }
+
+    .cbtn {
+      position: relative;
+      background: var(--s1); border: 1px solid var(--border); border-radius: 50%;
+      color: var(--text); cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; touch-action: manipulation; flex-shrink: 0;
+      user-select: none; -webkit-user-select: none;
+      box-shadow: 0 5px 16px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.05) inset;
+      transition: border-color 0.15s;
+    }
+    .cbtn-inner {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; width: 100%; height: 100%;
+      transition: transform 0.18s cubic-bezier(0.34,1.5,0.64,1);
+    }
+    .cbtn:active .cbtn-inner { transform: scale(0.86); }
+    .cbtn.s  { width: 62px; height: 62px; }
+    .cbtn.xl {
+      width: 88px; height: 88px;
+      background: var(--green); border-color: var(--green); color: #000;
+      box-shadow: 0 6px 28px rgba(29,185,84,0.42), 0 1px 0 rgba(255,255,255,0.15) inset;
+    }
+    .cbtn.xl:active .cbtn-inner { transform: scale(0.88); }
+    .cbtn-lbl { font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); line-height: 1; }
+    .cbtn.xl .cbtn-lbl { color: rgba(0,0,0,0.45); }
+
+    .secondary { display: flex; align-items: center; justify-content: center; gap: 16px; }
+    .sbtn-wrap { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .sbtn {
+      position: relative;
+      background: var(--s1); border: 1px solid var(--border); border-radius: 15px;
+      color: var(--text-dim); cursor: pointer;
+      width: 60px; height: 54px;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; touch-action: manipulation;
+      user-select: none; -webkit-user-select: none;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.4);
+      transition: color 0.18s, border-color 0.18s, background 0.18s;
+    }
+    .sbtn-inner {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; transition: transform 0.18s cubic-bezier(0.34,1.5,0.64,1);
+    }
+    .sbtn:active .sbtn-inner { transform: scale(0.84); }
+    .sbtn.lit { color: var(--green); border-color: rgba(29,185,84,0.28); background: rgba(29,185,84,0.09); }
+    .sbtn-lbl { font-size: 7px; letter-spacing: 0.1em; text-transform: uppercase; line-height: 1; }
+
+    .indicator { width: 4px; height: 4px; border-radius: 50%; background: transparent; transition: background 0.25s; }
+    .indicator.on { background: var(--green); }
+
+    .vol-section { display: flex; flex-direction: column; gap: 10px; }
+    .vol-row { display: flex; align-items: center; gap: 12px; padding: 0 2px; }
+    .vol-ico { color: var(--text-dim); flex-shrink: 0; }
+
+    input[type=range] {
+      -webkit-appearance: none; appearance: none;
+      flex: 1; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--border); }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--green); cursor: pointer; margin-top: -10px;
+      box-shadow: 0 0 12px rgba(29,185,84,0.45), 0 2px 8px rgba(0,0,0,0.55);
+      transition: transform 0.12s, box-shadow 0.15s;
+    }
+    input[type=range]:active::-webkit-slider-thumb {
+      transform: scale(1.22);
+      box-shadow: 0 0 20px rgba(29,185,84,0.65), 0 2px 10px rgba(0,0,0,0.55);
+    }
+
+    .divider { height: 1px; background: var(--border); margin: 0 16px; flex-shrink: 0; position: relative; z-index: 2; }
+
+    .ripple {
+      position: absolute; border-radius: 50%;
+      background: rgba(255,255,255,0.14); transform: scale(0);
+      animation: rippleOut 0.52s linear forwards; pointer-events: none;
+    }
+    .cbtn.xl .ripple { background: rgba(0,0,0,0.12); }
+    @keyframes rippleOut { to { transform: scale(4.5); opacity: 0; } }
   </style>
 </head>
 <body>
 
-  <!-- Connecting / IP entry screen -->
-  <div class="connecting" id="connectingScreen">
-    <div class="connecting-title">TIZEN REMOTE</div>
-    <div class="ip-form">
-      <input
-        class="ip-input"
-        id="tvIpInput"
-        type="text"
-        inputmode="numeric"
-        placeholder="TV IP (e.g. 10.0.0.X)"
-        autocomplete="off"
-      />
-      <button class="connect-btn" id="connectBtn">CONNECT</button>
+<div id="toastWrap"></div>
+
+<!-- CAMERA -->
+<div id="camOverlay">
+  <div id="camFlash"></div>
+  <video id="camVideo" autoplay playsinline muted></video>
+  <canvas id="camCanvas"></canvas>
+  <div class="cam-ui">
+    <div class="cam-heading">Scan TV IP</div>
+    <div class="reticle">
+      <div class="rc tl"></div><div class="rc tr"></div>
+      <div class="rc bl"></div><div class="rc br"></div>
+      <div class="scanline"></div>
     </div>
-    <div class="ip-hint">
-      Find your TV's IP in<br/>
-      Settings → Network → Network Status
+    <div class="cam-hint">Point at a QR code containing<br>your TV's IP address</div>
+    <button class="cam-cancel" id="camCancel">CANCEL</button>
+  </div>
+</div>
+
+<!-- CONNECT -->
+<div id="connectScreen">
+  <div class="logo-group">
+    <div class="logo-icon">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+      </svg>
+    </div>
+    <div class="logo-name">tizenfy</div>
+    <div class="logo-tagline">TV Remote</div>
+  </div>
+
+  <div class="connect-card">
+    <div class="card-label">Connect to your TV</div>
+    <div class="ip-wrap">
+      <input id="ipInput" class="ip-input" type="text" inputmode="numeric"
+        placeholder="192.168.1.X" autocomplete="off" autocorrect="off"
+        autocapitalize="none" spellcheck="false" maxlength="15" />
+      <button class="qr-btn" id="qrBtn" aria-label="Scan QR code">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M9.5 6.5v3h-3v-3h3M11 5H5v6h6V5zm-1.5 9.5v3h-3v-3h3M11 13H5v6h6v-6zm6.5-6.5v3h-3v-3h3M19 5h-6v6h6V5zm-6 8h1.5v1.5H13V13zm1.5 1.5H16V16h-1.5v-1.5zM16 13h1.5v1.5H16V13zm-3 3h1.5v1.5H13V16zm1.5 1.5H16V19h-1.5v-1.5zM16 16h1.5v1.5H16V16zm1.5-1.5H19V16h-1.5v-1.5zM19 13h-1.5v1.5H19V13z"/>
+        </svg>
+      </button>
+    </div>
+    <div class="ip-err" id="ipErr"></div>
+    <button class="btn-connect" id="connectBtn"><span>CONNECT</span></button>
+    <div class="connect-hint">Settings → Network → Network Status<br>on your Samsung TV</div>
+  </div>
+</div>
+
+<!-- REMOTE -->
+<div id="remoteScreen">
+  <div class="ambient-glow" id="ambientGlow"></div>
+
+  <div class="topbar">
+    <span class="wordmark">tizenfy</span>
+    <div class="topbar-right">
+      <div class="cdot" id="cdot"></div>
+      <button class="btn-change" id="changeBtn">Change TV</button>
     </div>
   </div>
 
-  <!-- Status bar -->
-  <div class="status-bar">
-    <span class="app-title">TV Remote</span>
-    <div class="connection-dot" id="dot"></div>
-  </div>
-
-  <!-- Now playing -->
-  <div class="now-playing">
-    <div class="track-label">Now Playing</div>
-    <div class="track-name" id="trackName">—</div>
+  <div class="np-card" id="npCard">
+    <div class="np-top">
+      <span class="np-eyebrow">Now Playing</span>
+      <span class="ad-pill" id="adPill">Ad</span>
+    </div>
+    <div class="marquee-clip"><span class="track-name" id="trackName">—</span></div>
     <div class="artist-name" id="artistName">Not connected</div>
-    <div class="ad-badge" id="adBadge">Ad</div>
   </div>
 
-  <!-- Main controls -->
+  <div class="divider"></div>
+
   <div class="controls">
-
-    <!-- Row 1: Prev / Play-Pause / Next -->
-    <div class="row">
-      <button class="btn" id="btnPrev" data-action="prev">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
-        <span class="btn-label">Prev</span>
+    <div class="transport">
+      <button class="cbtn s" data-action="prev">
+        <div class="cbtn-inner">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6 8.5 6V6z"/></svg>
+          <span class="cbtn-lbl">Prev</span>
+        </div>
       </button>
-      <button class="btn green wide" id="btnPlay" data-action="playpause">
-        <svg id="playIcon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-        <span class="btn-label">Play / Pause</span>
+      <button class="cbtn xl" id="playBtn" data-action="playpause">
+        <div class="cbtn-inner">
+          <svg id="playIco" width="30" height="30" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+        </div>
       </button>
-      <button class="btn" id="btnNext" data-action="next">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14 5.09 3.64L8 17.14V9.86zM16 6h2v12h-2z"/></svg>
-        <span class="btn-label">Next</span>
-      </button>
-    </div>
-
-    <!-- Row 2: Shuffle / Like / Repeat -->
-    <div class="row">
-      <button class="btn" data-action="shuffle">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
-        <span class="btn-label">Shuffle</span>
-      </button>
-      <button class="btn" data-action="like">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-        <span class="btn-label">Like</span>
-      </button>
-      <button class="btn" data-action="repeat">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
-        <span class="btn-label">Repeat</span>
+      <button class="cbtn s" data-action="next">
+        <div class="cbtn-inner">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2-8.14 5.09 3.64L8 17.14V9.86zM16 6h2v12h-2z"/></svg>
+          <span class="cbtn-lbl">Next</span>
+        </div>
       </button>
     </div>
 
-    <!-- Row 3: Home / Queue / Search -->
-    <div class="row">
-      <button class="btn" data-action="home">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-        <span class="btn-label">Home</span>
-      </button>
-      <button class="btn" data-action="queue">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15 6H3v2h12V6zm0 4H3v2h12v-2zM3 16h8v-2H3v2zM17 6v8.18c-.31-.11-.65-.18-1-.18-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3V8h3V6h-5z"/></svg>
-        <span class="btn-label">Queue</span>
-      </button>
-      <button class="btn" data-action="search">
-        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-        <span class="btn-label">Search</span>
-      </button>
+    <div class="secondary">
+      <div class="sbtn-wrap">
+        <button class="sbtn" id="btnShuffle" data-action="shuffle">
+          <div class="sbtn-inner">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17 5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+            <span class="sbtn-lbl">Shuffle</span>
+          </div>
+        </button>
+        <div class="indicator" id="dotShuffle"></div>
+      </div>
+      <div class="sbtn-wrap">
+        <button class="sbtn" id="btnLike" data-action="like">
+          <div class="sbtn-inner">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <span class="sbtn-lbl">Like</span>
+          </div>
+        </button>
+        <div class="indicator" id="dotLike"></div>
+      </div>
+      <div class="sbtn-wrap">
+        <button class="sbtn" id="btnRepeat" data-action="repeat">
+          <div class="sbtn-inner">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="currentColor"><path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/></svg>
+            <span class="sbtn-lbl">Repeat</span>
+          </div>
+        </button>
+        <div class="indicator" id="dotRepeat"></div>
+      </div>
     </div>
 
-    <!-- Volume -->
-    <div class="volume-row">
-      <svg class="vol-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
-      </svg>
-      <input type="range" id="volumeSlider" min="0" max="10" value="7" step="1" />
-      <svg class="vol-icon" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-      </svg>
+    <div class="vol-section">
+      <div class="vol-row">
+        <svg class="vol-ico" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>
+        </svg>
+        <input type="range" id="volSlider" min="0" max="15" value="7" step="1" />
+        <svg class="vol-ico" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+        </svg>
+      </div>
     </div>
-
   </div>
+</div>
 
-  <script>
-    // ─── STATE ───────────────────────────────────────────────────────────────
-    let ws = null;
-    let tvIP = localStorage.getItem('tizenSpotifyIP') || '';
-    let connected = false;
-    let lastVolume = 7;
-    let isPlaying = false;
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<script>
+'use strict';
 
-    // ─── ELEMENTS ────────────────────────────────────────────────────────────
-    const connectingScreen = document.getElementById('connectingScreen');
-    const tvIpInput = document.getElementById('tvIpInput');
-    const connectBtn = document.getElementById('connectBtn');
-    const dot = document.getElementById('dot');
-    const trackName = document.getElementById('trackName');
-    const artistName = document.getElementById('artistName');
-    const adBadge = document.getElementById('adBadge');
-    const playIcon = document.getElementById('playIcon');
-    const volumeSlider = document.getElementById('volumeSlider');
+// ── STATE ──────────────────────────────────────────────
+let ws          = null;
+let tvIP        = localStorage.getItem('tizenSpotifyIP') || '';
+let connected   = false;
+let lastVolume  = 7;
+let isPlaying   = false;
+let reconnTimer = null;
+let camStream   = null;
+let scanTimer   = null;
+let togShuffle  = false;
+let togLike     = false;
+let togRepeat   = false;
 
-    // ─── CONNECT ─────────────────────────────────────────────────────────────
-    function connect(ip) {
-      if (ws) { try { ws.close(); } catch(e){} }
+// ── REFS ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const connectScreen = $('connectScreen');
+const remoteScreen  = $('remoteScreen');
+const ipInput       = $('ipInput');
+const ipErr         = $('ipErr');
+const connectBtn    = $('connectBtn');
+const changeBtn     = $('changeBtn');
+const cdot          = $('cdot');
+const npCard        = $('npCard');
+const trackName     = $('trackName');
+const artistName    = $('artistName');
+const adPill        = $('adPill');
+const playIco       = $('playIco');
+const volSlider     = $('volSlider');
+const ambientGlow   = $('ambientGlow');
+const qrBtn         = $('qrBtn');
+const camOverlay    = $('camOverlay');
+const camVideo      = $('camVideo');
+const camCanvas     = $('camCanvas');
+const camCancel     = $('camCancel');
+const camFlash      = $('camFlash');
 
-      connectBtn.textContent = 'CONNECTING...';
+// ── TOASTS (DOM-safe, no innerHTML for user data) ──────
+const toastWrap = $('toastWrap');
 
-      ws = new WebSocket(`ws://${ip}:8765`);
+function buildToastSVG(isErr) {
+  const ns  = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'toast-ico');
+  svg.setAttribute('width', '17');
+  svg.setAttribute('height', '17');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'currentColor');
+  svg.style.color = isErr ? 'var(--red)' : 'var(--green)';
+  const path = document.createElementNS(ns, 'path');
+  path.setAttribute('d', isErr
+    ? 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z'
+    : 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z');
+  svg.appendChild(path);
+  return svg;
+}
 
-      ws.onopen = () => {
-        connected = true;
-        localStorage.setItem('tizenSpotifyIP', ip);
-        dot.classList.add('connected');
-        connectingScreen.classList.add('hidden');
-        ws.send(JSON.stringify({ type: 'register', role: 'remote' }));
-      };
+function toast(msg, isErr, dur) {
+  isErr = !!isErr; dur = dur || 3200;
+  const el  = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  const txt = document.createElement('span');
+  txt.className = 'toast-msg';
+  txt.textContent = msg;           // textContent — safe from XSS
+  el.appendChild(buildToastSVG(isErr));
+  el.appendChild(txt);
+  toastWrap.appendChild(el);
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 420);
+  }, dur);
+}
 
-      ws.onmessage = (event) => {
-        let msg;
-        try { msg = JSON.parse(event.data); } catch(e) { return; }
-        if (msg.type === 'status') updateStatus(msg);
-      };
+// ── IP AUTO-FORMAT ─────────────────────────────────────
+ipInput.addEventListener('input', function () {
+  const before = this.value;
+  let digits   = before.replace(/\D/g, '');
 
-      ws.onclose = () => {
-        connected = false;
-        dot.classList.remove('connected');
-        connectingScreen.classList.remove('hidden');
-        connectBtn.textContent = 'CONNECT';
-        artistName.textContent = 'Disconnected';
-        // Auto-reconnect after 3s if we had a saved IP
-        if (tvIP) setTimeout(() => connect(tvIP), 3000);
-      };
+  const groups = [];
+  let i = 0;
+  while (i < digits.length && groups.length < 4) {
+    let chunk = digits.slice(i, i + 3);
+    if (parseInt(chunk, 10) > 255) chunk = chunk.slice(0, 2);
+    groups.push(chunk);
+    i += chunk.length;
+  }
 
-      ws.onerror = () => {
-        connectBtn.textContent = 'RETRY';
-      };
+  let formatted = groups.join('.');
+  const last = groups[groups.length - 1] || '';
+  const shrinking = before.length > formatted.length;
+
+  if (!shrinking && groups.length < 4 && last.length > 0) {
+    const n = parseInt(last, 10);
+    if (last.length === 3 || (last.length === 2 && n > 25)) {
+      formatted += '.';
     }
+  }
+  this.value = formatted;
+  clearErr();
+});
 
-    function sendCommand(action) {
-      if (!ws || ws.readyState !== WebSocket.OPEN) return;
-      ws.send(JSON.stringify({ type: 'command', action }));
-      // Haptic feedback on supported iPhones
-      if (navigator.vibrate) navigator.vibrate(10);
+ipInput.addEventListener('keydown', function (e) {
+  if (e.key === 'Backspace') {
+    const v = this.value, p = this.selectionStart;
+    if (p > 0 && v[p - 1] === '.') {
+      e.preventDefault();
+      this.value = v.slice(0, p - 1) + v.slice(p);
+      this.setSelectionRange(p - 1, p - 1);
     }
+  }
+  if (e.key === 'Enter') doConnect();
+});
 
-    // ─── STATUS UPDATE ───────────────────────────────────────────────────────
-    function updateStatus(msg) {
-      trackName.textContent = msg.track || '—';
-      artistName.textContent = msg.artist || '—';
-      isPlaying = msg.isPlaying;
+function setErr(msg) {
+  ipInput.classList.add('bad');
+  ipErr.textContent = msg;         // textContent — safe
+  ipErr.classList.add('on');
+  ipInput.style.animation = 'none';
+  void ipInput.offsetWidth;
+  ipInput.style.animation = '';
+}
+function clearErr() { ipInput.classList.remove('bad'); ipErr.classList.remove('on'); }
 
-      // Swap play/pause icon
-      playIcon.innerHTML = isPlaying
-        ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'  // pause
-        : '<path d="M8 5v14l11-7z"/>';                      // play
+// ── WEBSOCKET ──────────────────────────────────────────
+function connect(ip) {
+  if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; }
+  if (ws) { try { ws.close(); } catch (_) {} ws = null; }
 
-      // Ad badge
-      adBadge.classList.toggle('visible', !!msg.isAd);
+  connectBtn.querySelector('span').textContent = 'CONNECTING…';
+  connectBtn.classList.add('busy');
+  clearErr();
+
+  ws = new WebSocket('ws://' + ip + ':8765');
+
+  const deadline = setTimeout(() => {
+    if (ws && ws.readyState !== WebSocket.OPEN) ws.close();
+  }, 6000);
+
+  ws.onopen = () => {
+    clearTimeout(deadline);
+    connected = true; tvIP = ip;
+    localStorage.setItem('tizenSpotifyIP', ip);
+    cdot.classList.add('live');
+    connectBtn.querySelector('span').textContent = 'CONNECT';
+    connectBtn.classList.remove('busy');
+    showRemote();
+    ws.send(JSON.stringify({ type: 'register', role: 'remote' }));
+    toast('Connected to TV');
+  };
+
+  ws.onmessage = e => {
+    let msg; try { msg = JSON.parse(e.data); } catch (_) { return; }
+    if (msg.type === 'status') updateStatus(msg);
+    if (msg.type === 'error' && typeof msg.message === 'string') toast(msg.message, true);
+  };
+
+  ws.onclose = () => {
+    clearTimeout(deadline);
+    connected = false; cdot.classList.remove('live');
+    connectBtn.querySelector('span').textContent = 'CONNECT';
+    connectBtn.classList.remove('busy');
+    if (tvIP && remoteScreen.classList.contains('on')) {
+      toast('Lost connection — reconnecting…', true);
+      reconnTimer = setTimeout(() => connect(tvIP), 3000);
+    } else {
+      setErr('TV not found — check IP and try again');
+      toast('Could not reach TV at ' + ip, true);
+      showConnect();
     }
+  };
+}
 
-    // ─── BUTTON CLICKS ───────────────────────────────────────────────────────
-    document.querySelectorAll('[data-action]').forEach(btn => {
-      btn.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        sendCommand(btn.dataset.action);
-      });
-      // Fallback for non-touch
-      btn.addEventListener('click', () => sendCommand(btn.dataset.action));
+function doConnect() {
+  const ip = ipInput.value.trim();
+  const parts = ip.split('.');
+  if (parts.length !== 4 || parts.some(p => p === '' || isNaN(Number(p)) || Number(p) > 255)) {
+    setErr('Enter a valid IP  e.g. 192.168.1.10');
+    return;
+  }
+  connect(ip);
+}
+
+function sendCmd(action) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) { toast('Not connected', true); return; }
+  ws.send(JSON.stringify({ type: 'command', action: action }));
+  if (navigator.vibrate) navigator.vibrate(9);
+}
+
+// ── STATUS ─────────────────────────────────────────────
+function updateStatus(msg) {
+  const newTrack = (typeof msg.track === 'string' ? msg.track : null) || '—';
+  if (trackName.dataset.val !== newTrack) {
+    trackName.dataset.val = newTrack;
+    trackName.textContent = newTrack;  // textContent — safe
+    trackName.classList.remove('scroll');
+    requestAnimationFrame(() => {
+      const clip = trackName.parentElement;
+      const ov = trackName.scrollWidth - clip.clientWidth;
+      if (ov > 16) {
+        trackName.style.setProperty('--dx', '-' + (ov + 32) + 'px');
+        trackName.style.setProperty('--dur', Math.max(5, ov / 28) + 's');
+        void trackName.offsetWidth;
+        trackName.classList.add('scroll');
+      }
     });
+  }
 
-    // ─── VOLUME SLIDER ───────────────────────────────────────────────────────
-    volumeSlider.addEventListener('input', () => {
-      const val = parseInt(volumeSlider.value);
-      const delta = val - lastVolume;
-      if (delta > 0) { for (let i = 0; i < delta; i++) sendCommand('volumeup'); }
-      else if (delta < 0) { for (let i = 0; i < Math.abs(delta); i++) sendCommand('volumedown'); }
-      lastVolume = val;
+  artistName.textContent = (typeof msg.artist === 'string' ? msg.artist : null) || '—';
+
+  isPlaying = !!msg.isPlaying;
+  // Update play/pause path safely via DOM
+  const path = playIco.querySelector('path');
+  if (path) path.setAttribute('d', isPlaying
+    ? 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'
+    : 'M8 5v14l11-7z');
+
+  const isAd = !!msg.isAd;
+  adPill.classList.toggle('show', isAd);
+  npCard.classList.toggle('ad-on', isAd);
+  ambientGlow.classList.toggle('ad-mode', isAd);
+
+  if (msg.shuffle !== undefined) applyToggle('shuffle', !!msg.shuffle);
+  if (msg.like    !== undefined) applyToggle('like',    !!msg.like);
+  if (msg.repeat  !== undefined) applyToggle('repeat',  !!msg.repeat);
+}
+
+function applyToggle(name, active) {
+  const cap = name.charAt(0).toUpperCase() + name.slice(1);
+  const btn = $('btn' + cap), dot = $('dot' + cap);
+  if (btn) btn.classList.toggle('lit', active);
+  if (dot) dot.classList.toggle('on',  active);
+  if (name === 'shuffle') togShuffle = active;
+  if (name === 'like')    togLike    = active;
+  if (name === 'repeat')  togRepeat  = active;
+}
+
+// ── SCREENS ────────────────────────────────────────────
+function showRemote()  { connectScreen.classList.add('away');    remoteScreen.classList.add('on'); }
+function showConnect() { connectScreen.classList.remove('away'); remoteScreen.classList.remove('on'); }
+
+// ── BUTTONS ────────────────────────────────────────────
+connectBtn.addEventListener('click', doConnect);
+
+changeBtn.addEventListener('click', () => {
+  if (reconnTimer) { clearTimeout(reconnTimer); reconnTimer = null; }
+  if (ws) { try { ws.close(); } catch (_) {} ws = null; }
+  tvIP = ''; localStorage.removeItem('tizenSpotifyIP');
+  connected = false; cdot.classList.remove('live');
+  showConnect();
+});
+
+function ripple(el, touch) {
+  const r  = el.getBoundingClientRect();
+  const x  = (touch ? touch.clientX : r.left + r.width  / 2) - r.left;
+  const y  = (touch ? touch.clientY : r.top  + r.height / 2) - r.top;
+  const sz = Math.max(r.width, r.height);
+  const sp = document.createElement('span');
+  sp.className = 'ripple';
+  sp.style.width  = sz + 'px';
+  sp.style.height = sz + 'px';
+  sp.style.left   = (x - sz / 2) + 'px';
+  sp.style.top    = (y - sz / 2) + 'px';
+  el.appendChild(sp);
+  sp.addEventListener('animationend', () => sp.remove());
+}
+
+document.querySelectorAll('.cbtn, .sbtn').forEach(btn => {
+  btn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    ripple(btn, e.touches[0]);
+    const a = btn.dataset.action;
+    if (!a) return;
+    sendCmd(a);
+    if (a === 'shuffle') applyToggle('shuffle', !togShuffle);
+    if (a === 'like')    applyToggle('like',    !togLike);
+    if (a === 'repeat')  applyToggle('repeat',  !togRepeat);
+  }, { passive: false });
+  btn.addEventListener('click', () => { const a = btn.dataset.action; if (a) sendCmd(a); });
+});
+
+// ── VOLUME ─────────────────────────────────────────────
+volSlider.addEventListener('input', () => {
+  const v = parseInt(volSlider.value, 10);
+  const d = v - lastVolume;
+  if (d > 0) for (let i = 0; i < d;  i++) sendCmd('volumeup');
+  if (d < 0) for (let i = 0; i < -d; i++) sendCmd('volumedown');
+  lastVolume = v;
+});
+
+// ── QR SCANNER ─────────────────────────────────────────
+qrBtn.addEventListener('click', openCam);
+camCancel.addEventListener('click', closeCam);
+
+async function openCam() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    toast('Camera unavailable on this device', true); return;
+  }
+  try {
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
     });
+    camVideo.srcObject = camStream;
+    camOverlay.classList.add('open');
+    await camVideo.play();
+    startScan();
+  } catch (_) {
+    toast('Camera permission denied', true);
+  }
+}
 
-    // ─── CONNECT BUTTON ──────────────────────────────────────────────────────
-    connectBtn.addEventListener('click', () => {
-      const ip = tvIpInput.value.trim();
-      if (ip) { tvIP = ip; connect(ip); }
-    });
+function closeCam() {
+  camOverlay.classList.remove('open');
+  if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+  if (camStream) { camStream.getTracks().forEach(t => t.stop()); camStream = null; }
+  camVideo.srcObject = null;
+}
 
-    tvIpInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') connectBtn.click();
-    });
-
-    // ─── AUTO-CONNECT IF IP SAVED ────────────────────────────────────────────
-    if (tvIP) {
-      tvIpInput.value = tvIP;
-      connect(tvIP);
+function startScan() {
+  if (typeof jsQR === 'undefined') { toast('QR library not loaded', true); return; }
+  scanTimer = setInterval(() => {
+    if (!camVideo.videoWidth) return;
+    const w = camVideo.videoWidth, h = camVideo.videoHeight;
+    camCanvas.width = w; camCanvas.height = h;
+    const ctx = camCanvas.getContext('2d');
+    ctx.drawImage(camVideo, 0, 0, w, h);
+    const img  = ctx.getImageData(0, 0, w, h);
+    const code = jsQR(img.data, img.width, img.height);
+    if (code) {
+      const m = code.data.match(/\b(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\b/);
+      if (m) onQRFound(m[1]);
     }
-  </script>
+  }, 200);
+}
+
+function onQRFound(ip) {
+  if (navigator.vibrate) navigator.vibrate([25, 15, 25]);
+  camFlash.classList.remove('flash');
+  void camFlash.offsetWidth;
+  camFlash.classList.add('flash');
+  setTimeout(() => {
+    closeCam();
+    ipInput.value = ip;
+    clearErr();
+    toast('IP captured: ' + ip);
+  }, 420);
+}
+
+// ── BOOT ───────────────────────────────────────────────
+if (tvIP) { ipInput.value = tvIP; connect(tvIP); }
+</script>
 </body>
 </html>

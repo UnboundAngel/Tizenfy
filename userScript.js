@@ -4,7 +4,10 @@
  * WebSocket client for iPhone remote control
  *
  * Strategy: Full page redirect to open.spotify.com
- * Ad handling: Mute (NOT block) - lets ad play silently, Spotify server stays happy
+ * Ad handling (3 layers, inspired by adblockify):
+ *   1. Network interception — fetch/XHR override blocks known ad-delivery endpoints
+ *   2. Auto-skip — detected ads are skipped immediately (muted first as safety net)
+ *   3. CSS hide — ad UI elements are hidden regardless
  * Audio detection: Multi-layer fallback (createElement hook + DOM query + MutationObserver)
  * Remote: WebSocket to service.js, receives commands from iPhone web app
  */
@@ -22,6 +25,23 @@
       '[aria-label="Advertisement"]',
       '.now-playing > a[href*="ad"]',
     ],
+    // Known Spotify ad-delivery URL patterns — requests matching these are blocked
+    // returning an empty 200 so the player doesn't throw a network error.
+    adUrlPatterns: [
+      /\/ads\//i,
+      /\/ad-logic\//i,
+      /\/adeventtracker\//i,
+      /spclient\.wg\.spotify\.com\/ad-logic/i,
+      /audio-ak\.spotify\.com\/audio\/.*_ad/i,
+      /pagead/i,
+      /doubleclick\.net/i,
+      /googlesyndication/i,
+    ],
+    // Milliseconds to wait after muting before attempting skip
+    // (tiny delay avoids Spotify detecting an instant 0-second ad play)
+    adSkipDelay: 300,
+    // Minimum gap between auto-skips (prevents rapid-fire skipping on detection bounce)
+    adSkipCooldown: 4000,
     adCSS: `
       .Root__ads-container,
       [data-testid="context-item-info-ad-subtitle"],
@@ -51,6 +71,7 @@
     isMuted: false,
     ws: null,
     wsConnected: false,
+    lastSkipAt: 0,
   };
 
   // ─── COMMAND MAP ─────────────────────────────────────────────────────────────
@@ -130,6 +151,52 @@
     } catch (e) {}
   }
 
+  // ─── NETWORK INTERCEPTION (layer 1) ─────────────────────────────────────────
+
+  function isAdUrl(url) {
+    if (!url) return false;
+    const str = typeof url === 'string' ? url : url.toString();
+    return CONFIG.adUrlPatterns.some(re => re.test(str));
+  }
+
+  function interceptNetwork() {
+    // Override fetch
+    const origFetch = window.fetch;
+    window.fetch = function (input, init) {
+      if (isAdUrl(input instanceof Request ? input.url : input)) {
+        log('Blocked ad fetch:', input);
+        return Promise.resolve(new Response('', { status: 200, headers: { 'Content-Type': 'text/plain' } }));
+      }
+      return origFetch.apply(this, arguments);
+    };
+
+    // Override XMLHttpRequest
+    const OrigXHR = window.XMLHttpRequest;
+    function PatchedXHR() {
+      const xhr = new OrigXHR();
+      const origOpen = xhr.open.bind(xhr);
+      let blocked = false;
+      xhr.open = function (method, url, ...rest) {
+        if (isAdUrl(url)) {
+          log('Blocked ad XHR:', url);
+          blocked = true;
+          // Still call open so the object is valid, but we'll abort on send
+          origOpen(method, url, ...rest);
+          return;
+        }
+        origOpen(method, url, ...rest);
+      };
+      const origSend = xhr.send.bind(xhr);
+      xhr.send = function (...args) {
+        if (blocked) { xhr.abort(); return; }
+        origSend(...args);
+      };
+      return xhr;
+    }
+    PatchedXHR.prototype = OrigXHR.prototype;
+    window.XMLHttpRequest = PatchedXHR;
+  }
+
   // ─── USER AGENT ──────────────────────────────────────────────────────────────
 
   function setUserAgent() {
@@ -198,12 +265,29 @@
   function muteAll()   { if (!state.isMuted) { state.isMuted = true;  state.audioElements.forEach(el => el.muted = true);  } }
   function unmuteAll() { if (state.isMuted)  { state.isMuted = false; state.audioElements.forEach(el => el.muted = false); } }
 
+  function trySkipAd() {
+    const now = Date.now();
+    if (now - state.lastSkipAt < CONFIG.adSkipCooldown) return;
+    state.lastSkipAt = now;
+    // Mute immediately so no ad audio leaks during the skip delay
+    muteAll();
+    setTimeout(() => {
+      log('Auto-skipping ad');
+      clickSelector('[data-testid="control-button-skip-forward"]');
+    }, CONFIG.adSkipDelay);
+  }
+
   function startAdWatcher() {
     let last = false;
     setInterval(() => {
       const now = isAdPlaying();
-      if (now && !last) { muteAll(); last = true; }
-      else if (!now && last) { unmuteAll(); last = false; }
+      if (now && !last) {
+        last = true;
+        trySkipAd();
+      } else if (!now && last) {
+        unmuteAll();
+        last = false;
+      }
     }, CONFIG.adCheckInterval);
   }
 
@@ -234,6 +318,7 @@
   // ─── INIT ───────────────────────────────────────────────────────────────────
 
   function init() {
+    interceptNetwork(); // Must run before any Spotify requests fire
     setUserAgent();
     hookCreateElement();
 

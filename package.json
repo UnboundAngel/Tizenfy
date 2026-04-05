@@ -1,13 +1,12 @@
 {
   "name": "@unboundangel/tizenspotify",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "description": "Ad-free Spotify for Samsung Tizen TVs via TizenBrew",
   "packageType": "mods",
   "websiteURL": "https://open.spotify.com",
   "main": "userScript.js",
   "serviceFile": "service.js",
-  "evaluateScriptOnDocumentStart": true,
-  "keys": [
+"keys": [
     "MediaPlayPause",
     "MediaPlay",
     "MediaPause",
@@ -21,7 +20,7 @@
     "ColorF2Yellow",
     "ColorF3Blue"
   ],
-  "appName": "TizenSpotify",
+  "appName": "Tizenfy",
   "author": "UnboundAngel",
   "license": "GPL-3.0"
 }
