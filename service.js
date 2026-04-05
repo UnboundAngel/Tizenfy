@@ -6,8 +6,10 @@
  * Zero external dependencies — implements RFC 6455 with http + crypto only.
  */
 
-const http = require('http');
+const http   = require('http');
 const crypto = require('crypto');
+const fs     = require('fs');
+const path   = require('path');
 
 const PORT = 8765;
 const WS_MAGIC = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -142,9 +144,28 @@ function createWSClient(socket) {
 
 // ─── HTTP server (upgrade → WebSocket) ───────────────────────────────────────
 
+// Serve main.html so the phone can open http://TV-IP:8765 directly,
+// keeping everything on HTTP and avoiding the HTTPS→ws:// blocked-by-browser issue.
+const htmlFile = path.join(__dirname, 'main.html');
+
 const server = http.createServer((req, res) => {
+  if (req.method === 'GET' && (req.url === '/' || req.url === '/main.html')) {
+    fs.readFile(htmlFile, (err, data) => {
+      if (err) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        res.end('main.html not found');
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-cache',
+      });
+      res.end(data);
+    });
+    return;
+  }
   res.writeHead(200, { 'Content-Type': 'text/plain' });
-  res.end('TizenSpotify WebSocket server running');
+  res.end('Tizenfy running');
 });
 
 server.on('upgrade', (req, socket) => {

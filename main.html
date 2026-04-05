@@ -594,9 +594,17 @@
 <script>
 'use strict';
 
+// ── LOCAL-SERVER DETECTION ─────────────────────────────
+// When the page is served by service.js (http://TV-IP:8765) rather than
+// GitHub Pages, we already know the TV's IP from location.hostname.
+const isLocalServer = location.protocol === 'http:' && location.port === '8765';
+const isHttps       = location.protocol === 'https:';
+
 // ── STATE ──────────────────────────────────────────────
 let ws          = null;
-let tvIP        = localStorage.getItem('tizenSpotifyIP') || '';
+let tvIP        = isLocalServer
+                    ? location.hostname
+                    : (localStorage.getItem('tizenSpotifyIP') || '');
 let connected   = false;
 let lastVolume  = 7;
 let isPlaying   = false;
@@ -947,7 +955,28 @@ function onQRFound(ip) {
 }
 
 // ── BOOT ───────────────────────────────────────────────
-if (tvIP) { ipInput.value = tvIP; connect(tvIP); }
+if (isLocalServer) {
+  // Loaded from the TV — skip the connect screen entirely, auto-connect.
+  ipInput.value = tvIP;
+  connect(tvIP);
+} else if (isHttps) {
+  // GitHub Pages (HTTPS) can't open ws:// — show a banner explaining this.
+  const banner = document.createElement('div');
+  banner.style.cssText = [
+    'position:fixed','top:0','left:0','right:0','z-index:9999',
+    'background:#1a0e06','border-bottom:2px solid var(--orange)',
+    'color:#f2f2f2','font-family:DM Mono,monospace','font-size:11px',
+    'line-height:1.6','padding:14px 18px','text-align:center',
+  ].join(';');
+  const line1 = document.createTextNode('\u26a0\ufe0f HTTPS blocks local WebSocket connections.');
+  const br    = document.createElement('br');
+  const line2 = document.createTextNode('Open http://[TV\u2011IP]:8765 from your phone instead.');
+  banner.appendChild(line1); banner.appendChild(br); banner.appendChild(line2);
+  document.body.appendChild(banner);
+  if (tvIP) ipInput.value = tvIP;
+} else {
+  if (tvIP) { ipInput.value = tvIP; connect(tvIP); }
+}
 </script>
 </body>
 </html>
